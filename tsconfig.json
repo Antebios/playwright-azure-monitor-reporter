@@ -9,5 +9,21 @@
     "moduleResolution": "node",
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "demo",
+    "**/**.test.ts",
+    "**/**.spec.ts",
+    "**/playwright.config.ts",
+    "**/webpack.config.ts",
+    "tests"
+  ],
+  "compilation": {
+    "compiler": {
+      "context": "./src",
+      "outputPath": "./dist"
+    }
   }
+}

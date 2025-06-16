@@ -17,6 +17,10 @@ To install the Playwright Azure Monitor Reporter...
 
 `npm install playwright-azure-monitor-reporter`
 
+or
+
+`pnpm install playwright-azure-monitor-reporter`
+
 ## Configure Playwright
 
 ### Environment Variables
@@ -139,6 +143,4 @@ PlaywrightTests_CL
 | summarize count() by Browser, TestFile
 ```
 
-![kql-query](docs/images/azure-monitor-lw-02.png)
-
-```typescript
+![KQL Query](https://raw.githubusercontent.com/Antebios/playwright-azure-monitor-reporter/refs/heads/main/docs/images/azure-monitor-lw-02.png)

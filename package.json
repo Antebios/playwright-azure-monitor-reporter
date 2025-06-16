@@ -2,13 +2,23 @@
   "name": "playwright-azure-monitor-reporter",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "playwright",
+    "azure",
+    "monitor",
+    "reporter"
+  ],
+  "author": {
+    "name": "Richard Nunez",
+    "email": "antebios1@gmail.com",
+    "url": "https://github.com/Antebios/"
+  },
   "license": "ISC",
   "packageManager": "pnpm@10.12.1",
   "devDependencies": {
