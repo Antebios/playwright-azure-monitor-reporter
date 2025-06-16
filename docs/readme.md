@@ -1,6 +1,27 @@
+# Playwright Azure Monitor Reporter
 
+This plugin sends Playwright test results to Azure Monitor Log Analytics, allowing you to centralize, analyze, and visualize your test metrics in Azure.
+
+This guide will instruct you on how to create the Azure resources in order for this plugin to work and insert logs into the Log Analytics workspace.
 
 ![Azure Monitor Overview](images/azure-monitor-overview.jpg)
+
+## Table of Contents
+
+- [Playwright Azure Monitor Reporter](#playwright-azure-monitor-reporter)
+  - [Table of Contents](#table-of-contents)
+  - [Create an Azure Data Collection Endpoint](#create-an-azure-data-collection-endpoint)
+  - [Create an Azure Data Collection Table and Rule](#create-an-azure-data-collection-table-and-rule)
+    - [Create the Table](#create-the-table)
+    - [Create the Rule](#create-the-rule)
+    - [Continue to configure the custom log](#continue-to-configure-the-custom-log)
+  - [Configure Playwright with Reporter](#configure-playwright-with-reporter)
+    - [Create Environment Variables](#create-environment-variables)
+    - [Configure Playwright](#configure-playwright)
+  - [Run a Playwright test](#run-a-playwright-test)
+  - [Conclusion](#conclusion)
+
+
 
 ## Create an Azure Data Collection Endpoint
 
@@ -110,7 +131,9 @@ Be sure to note the Data Collection Rule **Immutable ID** and the **Data Source*
 
 The new table **will not** appear in the LAW Tables until a log is sent to the endpoint.
 
-## Create Environment Variables
+## Configure Playwright with Reporter
+
+### Create Environment Variables
 
 In your Playwright project create this environment variables:
 
@@ -121,14 +144,8 @@ In your Playwright project create this environment variables:
 - **LOG_ANALYTICS_DCR_IMMUTABLE_ID**: The immutable ID of your Data Collection Rule
 - **LOG_ANALYTICS_STREAM_NAME**: The stream name you defined in your DCR (e.g., Custom-PlaywrightTests_CL)
 
-## Run a Playwright test
 
-![dcr-11](images/azure-monitor-dcr-11.png)
-
-![dcr-12](images/azure-monitor-dcr-12.png)
-
-![dcr-13](images/azure-monitor-dcr-13.png)
-
+### Configure Playwright
 
 ```bash
   reporter: [
@@ -151,3 +168,24 @@ In your Playwright project create this environment variables:
     ],
   ],
 ```
+
+
+## Run a Playwright test
+
+Once your Playwright configuration file is properly configured then execute your test(s) to make sure test results are transmitted.
+
+1. Once your test is executed then you should see this log message to indicate a successful transmission to the Log Analytics workspace:
+
+   ![dcr-11](images/azure-monitor-dcr-11.png)
+
+2. And the table is now visible:
+
+   ![dcr-12](images/azure-monitor-dcr-12.png)
+
+3. Query the table and you will see the record:
+
+   ![dcr-13](images/azure-monitor-dcr-13.png)
+
+## Conclusion
+
+This concludes the guide to leverage and make use of the reporter.

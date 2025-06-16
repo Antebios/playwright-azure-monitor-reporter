@@ -64,6 +64,10 @@
           {
             "name": "Tags",
             "type": "string"
+          },
+          {
+            "name": "Project",
+            "type": "string"
           }
         ]
       }
