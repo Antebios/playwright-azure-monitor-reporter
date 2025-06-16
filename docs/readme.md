@@ -1,3 +1,5 @@
+
+
 ![Azure Monitor Overview](images/azure-monitor-overview.jpg)
 
 ## Create an Azure Data Collection Endpoint

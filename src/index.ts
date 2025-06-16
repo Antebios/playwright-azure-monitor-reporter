@@ -31,7 +31,7 @@ interface LogAnalyticsTestData {
   Project: string // Project name that all the tests belong to.  Just to organize if all tests are dumped into the same table
 }
 
-class LogAnalyticsReporter implements Reporter {
+class AzureMonitorReporter implements Reporter {
   private logsIngestionClient?: LogsIngestionClient
   private testResults: LogAnalyticsTestData[] = []
 
