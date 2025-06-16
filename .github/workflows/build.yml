@@ -65,16 +65,8 @@ jobs:
       - name: Build package
         run: pnpm run build
 
-
-      - name: Publish to npm - v1
-        if: github.event_name == 'release'
-        run: echo "Publishing to npm - v1"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Publish to npm - v2
         if: github.event_name == 'release' || github.event.action == 'published'
-        run: echo "Publishing to npm - v2"
-        # run: npm publish --access public
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
