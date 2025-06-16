@@ -1,13 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
+    "target": "ES2022",
+    "module": "CommonJS",
+    "lib": [
+      "ESNext",
+      "dom"
+    ] /* Specify library files to be included in the compilation. */,
     "declaration": true,
-    "outDir": "dist",
+    "declarationDir": "./dist" /* Output directory for generated declaration files. */,
+    "outDir": "./dist/",
     "strict": true,
+    "noImplicitAny": false /* Raise error on expressions and declarations with an implied 'any' type. */,
     "esModuleInterop": true,
     "moduleResolution": "node",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": ["src"],
   "exclude": [
