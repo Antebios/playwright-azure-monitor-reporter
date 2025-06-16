@@ -126,4 +126,26 @@ In your Playwright project create this environment variables:
 ![dcr-12](images/azure-monitor-dcr-12.png)
 
 ![dcr-13](images/azure-monitor-dcr-13.png)
-n
+
+
+```bash
+  reporter: [
+    ['list'], // or your existing reporters
+    [
+      './reporters/logAnalyticsReporter.ts',
+      {
+        projectName: 'Fundamentals Data Tests',
+        azureTenantId: process.env.AZURE_TENANT_ID,
+        azureClientId: process.env.AZURE_CLIENT_ID,
+        azureClientSecret: process.env.AZURE_CLIENT_SECRET,
+        environment: 'DEV',
+        RunId: process.env.BUILD_BUILDID || process.env.CI_PIPELINE_RUN_ID || process.env.GITHUB_RUN_ID,
+        commitSHA: process.env.BUILD_SOURCEVERSION || process.env.GIT_COMMIT_SHA || process.env.GITHUB_SHA,
+
+        dceEndpoint: process.env.LOG_ANALYTICS_DCE_ENDPOINT,
+        dcrImmutableId: process.env.LOG_ANALYTICS_DCR_IMMUTABLE_ID,
+        streamName: process.env.LOG_ANALYTICS_STREAM_NAME,
+      },
+    ],
+  ],
+```
