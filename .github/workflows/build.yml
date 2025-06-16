@@ -1,6 +1,14 @@
 name: Build and Publish
 
 on:
+  push:
+    branches:
+      - main
+      - feature/*
+  pull_request:
+    branches:
+      - main
+      - feature/*
   release:
     types: [created]
   workflow_dispatch:
@@ -20,8 +28,6 @@ jobs:
       - name: Determine Version
         id: version_step # step id used as a reference for output values
         uses: gittools/actions/gitversion/execute@v3.2.1
-        with:
-          useConfigFile: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -59,7 +65,16 @@ jobs:
       - name: Build package
         run: pnpm run build
 
-      # - name: Publish to npm
-      #   run: npm publish --access public
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm - v1
+        if: github.event_name == 'release'
+        run: echo "Publishing to npm - v1"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm - v2
+        if: github.event_name == 'release' || github.event.action == 'published'
+        run: echo "Publishing to npm - v2"
+        # run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
