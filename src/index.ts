@@ -173,4 +173,4 @@ class AzureMonitorReporter implements Reporter {
   }
 }
 
-export default LogAnalyticsReporter
+export default AzureMonitorReporter
