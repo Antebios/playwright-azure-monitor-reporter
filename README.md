@@ -3,36 +3,7 @@
 This plugin sends Playwright test results to Azure Monitor Log Analytics, allowing you to centralize, analyze, and visualize your test metrics in Azure.
 
 ## Overview
-The Playwright Azure Monitor Reporter is a custom reporter for Playwright tests that automatically collects test execution data and sends it to Azure Monitor Log Analytics. It enables you to:
-
-- Track test execution metrics in a central location
-- Monitor test results across different test runs, environments, and browsers
-- Create custom dashboards and alerts based on test results
-- Analyze trends in test stability and performance over time
-
-The reporter captures detailed information about each test, including:
-
-- Test status (passed, failed, skipped, etc.)
-- Test duration
-- Error messages and stack traces for failed tests
-- Test file paths and suite names
-- Browser information
-- Environment details
-- CI/CD run information and commit IDs
-
-### Key Features
-- Easy Configuration: Set up with environment variables or direct configuration in Playwright config
-- Authentication: Secure Azure authentication using Azure Identity credentials
-- Rich Data: Captures comprehensive test metadata for detailed analysis
-- Error Handling: Robust error handling to ensure test results are reliably captured
-- Flexibility: Works with any Playwright test project with minimal configuration
-
-### Use Cases
-- CI/CD Pipeline Integration: Track test results across builds and deployments
-- Test Health Monitoring: Identify flaky tests and track test stability over time
-- Cross-Environment Analysis: Compare test performance across different environments
-- Release Quality Insights: Get aggregated test metrics to inform release decisions
-- Check the documentation for setup instructions and configuration options.
+The Playwright Azure Monitor Reporter is a custom reporter for Playwright tests that automatically collects test execution data and sends it to Azure Monitor Log Analytics.
 
 ## Prerequisites
 
@@ -108,44 +79,66 @@ export default defineConfig({
 });
 ```
 
-Authentication Methods
-Explain the different ways to authenticate with Azure:
 
-Environment variables
-Azure Identity library credentials
-Direct credential configuration
-Environment Variables
-List all supported environment variables:
+## Data Schema
+This the schema of data being sent to Azure Monitor so users understand what metrics/fields are available for querying and visualization.
 
-Data Schema
-Document the schema of data being sent to Azure Monitor so users understand what metrics/fields are available for querying and visualization.
-
-Example KQL Queries
-Provide example Kusto queries for common reporting scenarios:
+```json
+"columns": [
+  { "name": "TimeGenerated", "type": "datetime" },
+  { "name": "RunID", "type": "string" },
+  { "name": "TestSuite", "type": "string" },
+  { "name": "TestCaseTitle", "type": "string" },
+  { "name": "Status", "type": "string" },
+  { "name": "DurationMs", "type": "real" },
+  { "name": "Browser", "type": "string" },
+  { "name": "Environment", "type": "string" },
+  { "name": "CommitSHA", "type": "string" },
+  { "name": "ErrorMessage", "type": "string" },
+  { "name": "StackTrace", "type": "string" },
+  { "name": "Retries", "type": "int" },
+  { "name": "WorkerIndex", "type": "int" },
+  { "name": "TestFile", "type": "string" },
+  { "name": "Tags", "type": "string" },
+  { "name": "Project", "type": "string" }
+]
 ```
-PlaywrightTestResults
-| where TestStatus == 'failed'
+
+This is a sample of the data sent to Azure Monitor:
+
+```json
+[
+  {
+    "TimeGenerated": "2024-01-01T00:00:00Z",
+    "RunID": "abc123",
+    "TestSuite": "LoginTests",
+    "TestCaseTitle": "should login successfully",
+    "Status": "Passed",
+    "DurationMs": 1234.56,
+    "Browser": "Chrome",
+    "Environment": "Staging",
+    "CommitSHA": "abcdef123456",
+    "ErrorMessage": "",
+    "StackTrace": "",
+    "Retries": 0,
+    "WorkerIndex": 1,
+    "TestFile": "login.spec.ts",
+    "Tags": "smoke", // comma-delmited list of tags
+    "Project": "My Project Name"
+  }
+]
+```
+
+## Example KQL Queries
+
+Provide example Kusto queries for common reporting scenarios:
+
+```typescript
+PlaywrightTests_CL
+| where TestStatus == 'passed'
 | summarize count() by Browser, TestFile
 ```
 
+![kql-query](docs/images/azure-monitor-lw-02.png)
 
-Best Practices
-Tips for organizing test data
-Recommended approaches for setting up dashboards
-Guidelines for querying and filtering test results
-CI/CD Integration
-Instructions for integrating with common CI/CD platforms (GitHub Actions, Azure DevOps, etc.)
-
-Troubleshooting
-Common issues and their solutions:
-
-Authentication problems
-Data not appearing in Log Analytics
-Error handling
-Advanced Configuration
-Detailed explanation of additional configuration options and customizations.
-
-Contributing
-How others can contribute to the project.
-
-This structure provides a comprehensive guide that helps users quickly understand, implement, and troubleshoot the package while maximizing their use of Azure Monitor for test reporting and analysis.
+```typescript
