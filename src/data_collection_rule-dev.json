@@ -1,0 +1,91 @@
+{
+  "location": "eastus",
+  "properties": {
+    "dataCollectionEndpointId": "/subscriptions/<subscription-id>/resourceGroups/<rg-name>/providers/Microsoft.Insights/dataCollectionEndpoints/<data-collection-endpoint-name>",
+    "streamDeclarations": {
+      "Custom-PlaywrightTestDataStream_CL": {
+        "columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime"
+          },
+          {
+            "name": "RunID",
+            "type": "string"
+          },
+          {
+            "name": "TestSuite",
+            "type": "string"
+          },
+          {
+            "name": "TestCaseTitle",
+            "type": "string"
+          },
+          {
+            "name": "Status",
+            "type": "string"
+          },
+          {
+            "name": "DurationMs",
+            "type": "real"
+          },
+          {
+            "name": "Browser",
+            "type": "string"
+          },
+          {
+            "name": "Environment",
+            "type": "string"
+          },
+          {
+            "name": "CommitSHA",
+            "type": "string"
+          },
+          {
+            "name": "ErrorMessage",
+            "type": "string"
+          },
+          {
+            "name": "StackTrace",
+            "type": "string"
+          },
+          {
+            "name": "Retries",
+            "type": "int"
+          },
+          {
+            "name": "WorkerIndex",
+            "type": "int"
+          },
+          {
+            "name": "TestFile",
+            "type": "string"
+          },
+          {
+            "name": "Tags",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "destinations": {
+      "logAnalytics": [
+        {
+          "workspaceResourceId": "/subscriptions/<subscription-id>/resourceGroups/<rg-name>/providers/Microsoft.OperationalInsights/workspaces/<log-analytics-workspace-name>",
+          "name": "logAnalyticsDestination"
+        }
+      ]
+    },
+    "dataFlows": [
+      {
+        "streams": [
+          "Custom-PlaywrightTestDataStream_CL"
+        ],
+        "destinations": [
+          "logAnalyticsDestination"
+        ],
+        "outputStream": "Custom-PlaywrightTestDataStream_CL"
+      }
+    ]
+  }
+}

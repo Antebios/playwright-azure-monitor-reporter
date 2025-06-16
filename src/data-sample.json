@@ -1,0 +1,20 @@
+[
+  {
+    "TimeGenerated": "2024-01-01T00:00:00Z",
+    "RunID": "abc123",
+    "TestSuite": "LoginTests",
+    "TestCaseTitle": "should login successfully",
+    "Status": "Passed",
+    "DurationMs": 1234.56,
+    "Browser": "Chrome",
+    "Environment": "Staging",
+    "CommitSHA": "abcdef123456",
+    "ErrorMessage": "",
+    "StackTrace": "",
+    "Retries": 0,
+    "WorkerIndex": 1,
+    "TestFile": "login.spec.ts",
+    "Tags": "smoke",
+    "Project": "Fundamentals Re-Platform"
+  }
+]

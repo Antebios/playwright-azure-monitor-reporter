@@ -1,0 +1,28 @@
+// {
+//   "compilerOptions": {
+//     "strict": true,
+//     "strictNullChecks": true,
+//     "esModuleInterop": true,
+//     "emitDecoratorMetadata": true,
+//     "experimentalDecorators": true,
+//     "noUnusedLocals": true,
+//     "skipLibCheck": true,
+//     "sourceMap": true,
+//     "jsx": "react-jsx",
+//     "moduleResolution": "node"
+//   }
+// }
+
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "declaration": true,
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+  }
