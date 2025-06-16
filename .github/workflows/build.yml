@@ -43,11 +43,11 @@ jobs:
         run: |
           #  npm version patch -m "Release %s [skip ci]"
           #  git push --follow-tags
-          sed -i 's/"version": *"[^"]*"/"version": "${{ env.GitVersion.FullSemVer }}"/' package.json
+          sed -i 's/"version": *"[^"]*"/"version": "${{ env.GitVersion_FullSemVer }}"/' package.json
       - name: Show version
         run: |
-          echo "Version: ${{ steps.version_step.outputs.full_sem_ver }}"
-          echo "GitVersion: ${{ env.GitVersion.FullSemVer }}"
+          echo "Version: ${{ steps.version_step.outputs.FullSemVer }}"
+          echo "GitVersion: ${{ env.GitVersion_FullSemVer }}"
           cat package.json
 
       - name: Install dependencies
