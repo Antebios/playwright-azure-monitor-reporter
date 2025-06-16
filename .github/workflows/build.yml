@@ -62,7 +62,7 @@ jobs:
       - name: Build package
         run: pnpm run build
 
-      - name: Publish to npm - v2
+      - name: Publish to npm
         if: github.event_name == 'release' || github.event.action == 'published'
         run: npm publish --access public
         env:
