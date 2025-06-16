@@ -39,13 +39,19 @@ jobs:
         run: |
          printenv | sort
 
-      # - name: Bump version and push tag
-      #   run: |
-      #      npm version patch -m "Release %s [skip ci]"
-      #      git push --follow-tags
-      #      sed -i 's/"version": *"[^"]*"/"version": "0.01.-alpha-01"/' package.json
-      # - name: Install dependencies
-      #   run: pnpm install
+      - name: Bump version and push tag
+        run: |
+          #  npm version patch -m "Release %s [skip ci]"
+          #  git push --follow-tags
+          sed -i 's/"version": *"[^"]*"/"version": "${{ env.GitVersion.FullSemVer }}"/' package.json
+      - name: Show version
+        run: |
+          echo "Version: ${{ steps.version_step.outputs.full_sem_ver }}"
+          echo "GitVersion: ${{ env.GitVersion.FullSemVer }}"
+          cat package.json
+
+      - name: Install dependencies
+        run: pnpm install
 
       # - name: Run tests
       #   run: npm test
