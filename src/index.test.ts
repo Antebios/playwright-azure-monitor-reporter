@@ -27,9 +27,9 @@ describe('AzureMonitorReporter', () => {
 
   it('should collect test results on onTestEnd', () => {
     const reporter = new AzureMonitorReporter(minimalOptions);
-    // @ts-ignore: access private
+    // @ts-expect-error: access private
     reporter.currentConfig = {} as FullConfig;
-    // @ts-ignore: access private
+    // @ts-expect-error: access private
     reporter.currentRunSuite = {} as Suite;
     const fakeTest = {
       title: 'should do something',
@@ -48,9 +48,9 @@ describe('AzureMonitorReporter', () => {
       workerIndex: 1,
     } as TestResult;
     reporter.onTestEnd(fakeTest, fakeResult);
-    // @ts-ignore: access private
+    // @ts-expect-error: access private
     expect(reporter.testResults.length).toBe(1);
-    // @ts-ignore: access private
+    // @ts-expect-error: access private
     expect(reporter.testResults[0].TestCaseTitle).toBe('should do something');
   });
 
@@ -66,7 +66,7 @@ describe('AzureMonitorReporter', () => {
 
   it('should log error on onError', () => {
     const reporter = new AzureMonitorReporter(minimalOptions);
-    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const spy = jest.spyOn(console, 'error').mockImplementation();
     reporter.onError(new Error('fail'));
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
