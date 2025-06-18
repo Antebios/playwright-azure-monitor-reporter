@@ -56,7 +56,7 @@ class AzureMonitorReporter implements Reporter {
   private environment: string;
   private RunId: string;
   private commitSHA?: string;
-  private debugMode: boolean = false; // Optional debug mode
+  private debugMode = false; // Optional debug mode
 
   // To store config and suite information accessible in onTestEnd
   private currentConfig!: FullConfig;
@@ -77,20 +77,16 @@ class AzureMonitorReporter implements Reporter {
       options?.projectName ||
       process.env.AZURE_PROJECT_NAME ||
       "DefaultProject";
-    this.dceEndpoint =
-      options?.dceEndpoint || process.env.LOG_ANALYTICS_DCE_ENDPOINT!;
-    this.dcrImmutableId =
-      options?.dcrImmutableId || process.env.LOG_ANALYTICS_DCR_IMMUTABLE_ID!;
-    this.streamName =
-      options?.streamName || process.env.LOG_ANALYTICS_STREAM_NAME!;
+    this.dceEndpoint = options?.dceEndpoint || process.env.LOG_ANALYTICS_DCE_ENDPOINT || "";
+    this.dcrImmutableId = options?.dcrImmutableId || process.env.LOG_ANALYTICS_DCR_IMMUTABLE_ID || "";
+    this.streamName = options?.streamName || process.env.LOG_ANALYTICS_STREAM_NAME || "";
 
     const azureTenantId = options?.azureTenantId || process.env.AZURE_TENANT_ID;
     const azureClientId = options?.azureClientId || process.env.AZURE_CLIENT_ID;
     const azureClientSecret =
       options?.azureClientSecret || process.env.AZURE_CLIENT_SECRET;
 
-    this.environment =
-      options?.environment || process.env.TEST_ENVIRONMENT || "local"; // Default to 'local' if not set
+    this.environment = options?.environment || process.env.TEST_ENVIRONMENT || "local"; // Default to 'local' if not set
     this.RunId =
       options?.RunId ||
       process.env.BUILD_BUILDID ||
@@ -104,29 +100,17 @@ class AzureMonitorReporter implements Reporter {
       process.env.GITHUB_SHA;
 
     if (!this.dceEndpoint || !this.dcrImmutableId || !this.streamName) {
-      console.warn(
-        "Log Analytics Reporter: DCE Endpoint, DCR Immutable ID, or Stream Name is not configured. Reporter will not send data."
-      );
+      console.warn("Log Analytics Reporter: DCE Endpoint, DCR Immutable ID, or Stream Name is not configured. Reporter will not send data.");
       return;
     }
 
     if (this.debugMode) {
-      console.debug(
-        `Log Analytics Reporter: Initialized with DCE Endpoint: ${this.dceEndpoint}`
-      );
-      console.debug(
-        `Log Analytics Reporter: Initialized with DCR Immutable ID: ${this.dcrImmutableId}`
-      );
-      console.debug(
-        `Log Analytics Reporter: Initialized with Stream Name: ${this.streamName}`
-      );
+      console.debug(`Log Analytics Reporter: Initialized with DCE Endpoint: ${this.dceEndpoint}`);
+      console.debug(`Log Analytics Reporter: Initialized with DCR Immutable ID: ${this.dcrImmutableId}`);
+      console.debug(`Log Analytics Reporter: Initialized with Stream Name: ${this.streamName}`);
 
-      console.debug(
-        `Log Analytics Reporter: Initialized with Azure Tenant: ${azureTenantId}`
-      );
-      console.debug(
-        `Log Analytics Reporter: Initialized with Azure Client ID: ${azureClientId}`
-      );
+      console.debug(`Log Analytics Reporter: Initialized with Azure Tenant: ${azureTenantId}`);
+      console.debug(`Log Analytics Reporter: Initialized with Azure Client ID: ${azureClientId}`);
     }
 
     if (azureTenantId && azureClientId && azureClientSecret) {
@@ -140,26 +124,16 @@ class AzureMonitorReporter implements Reporter {
         credential
       );
       if (this.debugMode) {
-        console.debug(
-          "Log Analytics Reporter: Azure credentials successfully configured. Reporter will send data."
-        );
-        console.debug(
-          `Log Analytics Reporter: logsIngestionClient: ${this.logsIngestionClient}`
-        );
+        console.debug("Log Analytics Reporter: Azure credentials successfully configured. Reporter will send data.");
+        console.debug(`Log Analytics Reporter: logsIngestionClient: ${this.logsIngestionClient}`);
       }
     } else {
-      console.warn(
-        "Log Analytics Reporter: Azure credentials not fully configured. Reporter will not send data."
-      );
+      console.warn("Log Analytics Reporter: Azure credentials not fully configured. Reporter will not send data.");
     }
   }
 
   onBegin(config: FullConfig, suite: Suite): void {
-    console.log(
-      `Log Analytics Reporter: Starting test run with ${
-        suite.allTests().length
-      } tests.`
-    );
+    console.log(`Log Analytics Reporter: Starting test run with ${suite.allTests().length} tests.`);
     this.currentConfig = config;
     this.currentRunSuite = suite;
     this.testResults = []; // Reset for new run
@@ -192,19 +166,12 @@ class AzureMonitorReporter implements Reporter {
   }
 
   async onEnd(result: FullResult): Promise<void> {
-    console.log(
-      `Log Analytics Reporter: Test run finished with status: ${result.status}`
-    );
+    console.log(`Log Analytics Reporter: Test run finished with status: ${result.status}`);
     if (this.logsIngestionClient && this.testResults.length > 0) {
-      console.log(
-        `Log Analytics Reporter: Preparing to send ${this.testResults.length} results to Azure Log Analytics.`
-      );
+      console.log(`Log Analytics Reporter: Preparing to send ${this.testResults.length} results to Azure Log Analytics.`);
       if (this.debugMode) {
         // print out the results for debugging
-        console.log(
-          "Log Analytics Reporter: Test Results:",
-          JSON.stringify(this.testResults, null, 2)
-        );
+        console.log("Log Analytics Reporter: Test Results:",JSON.stringify(this.testResults, null, 2));
       }
       try {
         // Ensure the streamName in your Data Collection Rule (DCR) is configured to accept the structure of LogAnalyticsTestData.
@@ -217,14 +184,9 @@ class AzureMonitorReporter implements Reporter {
             maxConcurrency: 5, // Optional: configure concurrency for uploads
           }
         );
-        console.log(
-          `Log Analytics Reporter: Successfully uploaded ${this.testResults.length} test results to Azure Log Analytics.`
-        );
+        console.log(`Log Analytics Reporter: Successfully uploaded ${this.testResults.length} test results to Azure Log Analytics.`);
       } catch (error) {
-        console.error(
-          "Log Analytics Reporter: Error uploading data to Azure Log Analytics:",
-          error
-        );
+        console.error("Log Analytics Reporter: Error uploading data to Azure Log Analytics:",error);
         // Optionally, write to a local file as a fallback
         // import * as fs from 'fs'; // Use 'import * as fs' for ES modules or 'const fs = require("fs")' for CJS
         // fs.writeFileSync(`log-analytics-fallback-${Date.now()}.json`, JSON.stringify(this.testResults, null, 2));
@@ -234,7 +196,7 @@ class AzureMonitorReporter implements Reporter {
     }
   }
 
-  onError(error: any): void {
+  onError(error): void {
     console.error("Log Analytics Reporter: An error occurred:", error);
   }
 }
