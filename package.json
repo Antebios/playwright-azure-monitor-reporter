@@ -1,7 +1,7 @@
 {
   "name": "playwright-azure-monitor-reporter",
   "version": "1.0.0",
-  "description": "",
+  "description": "A Playwright reporter for Azure Monitor",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -23,6 +23,10 @@
     "name": "Richard Nunez",
     "email": "antebios1@gmail.com",
     "url": "https://github.com/Antebios/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Antebios/playwright-azure-monitor-reporter.git"
   },
   "license": "ISC",
   "packageManager": "pnpm@10.12.1",
