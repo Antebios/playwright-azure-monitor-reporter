@@ -144,3 +144,14 @@ PlaywrightTests_CL
 ```
 
 ![KQL Query](https://raw.githubusercontent.com/Antebios/playwright-azure-monitor-reporter/refs/heads/main/docs/images/azure-monitor-lw-02.png)
+
+## Guide to creating Azure resources
+
+This is [detailed documentation](https://github.com/Antebios/playwright-azure-monitor-reporter/blob/main/docs/readme.md)  in order for you to create the Azure resources and table for this reproter to successfully publish the test results.
+
+The following resources need to be created before using this reporter:
+
+- Azure Log Analytics Workspace
+- Data Collection Endpoint
+- Data Collection Rule
+- Log Table
