@@ -4,6 +4,7 @@
   "description": "A Playwright reporter for Azure Monitor",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "type": "module",
   "scripts": {
     "lint": "eslint . --ext .ts",
     "format": "eslint . --ext .ts --fix",

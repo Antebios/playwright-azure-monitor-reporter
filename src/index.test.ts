@@ -1,47 +1,54 @@
-import AzureMonitorReporter, { AzureMonitorReporterOptions } from './index';
-import { FullConfig, Suite, TestCase, TestResult, FullResult } from '@playwright/test/reporter';
+import AzureMonitorReporter, { AzureMonitorReporterOptions } from "./index";
+import {
+  FullConfig,
+  Suite,
+  TestCase,
+  TestResult,
+  FullResult,
+} from "@playwright/test/reporter";
+import { stripVTControlCharacters } from "node:util";
 
-describe('AzureMonitorReporter', () => {
+describe("AzureMonitorReporter", () => {
   const minimalOptions: AzureMonitorReporterOptions = {
-    projectName: 'TestProject',
-    dceEndpoint: 'https://example.com',
-    dcrImmutableId: 'dcr-id',
-    streamName: 'stream',
-    azureTenantId: 'tenant',
-    azureClientId: 'client',
-    azureClientSecret: 'secret',
-    environment: 'test',
-    RunId: 'run-1',
-    commitSHA: 'sha',
+    projectName: "TestProject",
+    dceEndpoint: "https://example.com",
+    dcrImmutableId: "dcr-id",
+    streamName: "stream",
+    azureTenantId: "tenant",
+    azureClientId: "client",
+    azureClientSecret: "secret",
+    environment: "test",
+    RunId: "run-1",
+    commitSHA: "sha",
     debugMode: true,
   };
 
-  it('should initialize with options', () => {
+  it("should initialize with options", () => {
     const reporter = new AzureMonitorReporter(minimalOptions);
     expect(reporter).toBeInstanceOf(AzureMonitorReporter);
   });
 
-  it('should not throw if required Azure config is missing', () => {
+  it("should not throw if required Azure config is missing", () => {
     expect(() => new AzureMonitorReporter({})).not.toThrow();
   });
 
-  it('should collect test results on onTestEnd', () => {
+  it("should collect test results on onTestEnd", () => {
     const reporter = new AzureMonitorReporter(minimalOptions);
     // @ts-expect-error: access private
     reporter.currentConfig = {} as FullConfig;
     // @ts-expect-error: access private
     reporter.currentRunSuite = {} as Suite;
     const fakeTest = {
-      title: 'should do something',
+      title: "should do something",
       parent: {
-        title: 'suite',
-        project: () => ({ name: 'chromium' }),
+        title: "suite",
+        project: () => ({ name: "chromium" }),
       },
-      location: { file: 'testfile.spec.ts' },
-      tags: ['smoke'],
+      location: { file: "testfile.spec.ts" },
+      tags: ["smoke"],
     } as unknown as TestCase;
     const fakeResult = {
-      status: 'passed',
+      status: "passed",
       duration: 123,
       error: undefined,
       retry: 0,
@@ -51,24 +58,32 @@ describe('AzureMonitorReporter', () => {
     // @ts-expect-error: access private
     expect(reporter.testResults.length).toBe(1);
     // @ts-expect-error: access private
-    expect(reporter.testResults[0].TestCaseTitle).toBe('should do something');
+    expect(reporter.testResults[0].TestCaseTitle).toBe("should do something");
   });
 
-  it('should handle onBegin and onEnd', async () => {
+  it("should handle onBegin and onEnd", async () => {
     const reporter = new AzureMonitorReporter(minimalOptions);
     const fakeConfig = {} as FullConfig;
     const fakeSuite = { allTests: () => [1, 2, 3] } as unknown as Suite;
     reporter.onBegin(fakeConfig, fakeSuite);
-    expect(reporter['currentConfig']).toBe(fakeConfig);
-    expect(reporter['currentRunSuite']).toBe(fakeSuite);
-    await expect(reporter.onEnd({ status: 'passed' } as FullResult)).resolves.toBeUndefined();
+    expect(reporter["currentConfig"]).toBe(fakeConfig);
+    expect(reporter["currentRunSuite"]).toBe(fakeSuite);
+    await expect(
+      reporter.onEnd({ status: "passed" } as FullResult)
+    ).resolves.toBeUndefined();
   });
 
-  it('should log error on onError', () => {
+  it("should log error on onError", () => {
     const reporter = new AzureMonitorReporter(minimalOptions);
-    const spy = jest.spyOn(console, 'error').mockImplementation();
-    reporter.onError(new Error('fail'));
+    const spy = jest.spyOn(console, "error").mockImplementation();
+    reporter.onError(new Error("fail"));
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
+  });
+
+  it("should strip ANSI codes from error messages", () => {
+    const ansiString = "\u001b[31mfail\u001b[0m"; // Example ANSI escape codes
+    const strippedString = stripVTControlCharacters(ansiString);
+    expect(strippedString).toBe("fail");
   });
 });
