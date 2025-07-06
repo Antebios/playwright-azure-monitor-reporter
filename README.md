@@ -147,7 +147,7 @@ PlaywrightTests_CL
 
 ## Guide to creating Azure resources
 
-This is [detailed documentation](https://github.com/Antebios/playwright-azure-monitor-reporter/blob/main/docs/readme.md)  in order for you to create the Azure resources and table for this reproter to successfully publish the test results.
+This is [detailed documentation](https://github.com/Antebios/playwright-azure-monitor-reporter/blob/main/docs/readme.md)  in order for you to create the Azure resources and table for this reporter to successfully publish the test results.
 
 The following resources need to be created before using this reporter:
 
