@@ -7,9 +7,12 @@ import type {
   TestResult,
   TestStatus,
 } from "@playwright/test/reporter";
-import { ClientSecretCredential } from "@azure/identity";
-import { LogsIngestionClient } from "@azure/monitor-ingestion";
+import { ClientSecretCredential, DefaultAzureCredential } from "@azure/identity";
 import { stripVTControlCharacters } from "node:util";
+import { AzureMonitorPublisher, AzureMonitorTarget } from "./publisher.js";
+
+export { AzureMonitorPublisher } from "./publisher.js";
+export type { AzureMonitorPublisherOptions, AzureMonitorTarget } from "./publisher.js";
 
 export interface AzureMonitorReporterOptions {
   projectName?: string;
@@ -19,6 +22,9 @@ export interface AzureMonitorReporterOptions {
   dceEndpoint?: string;
   dcrImmutableId?: string;
   streamName?: string;
+  targets?: Record<string, AzureMonitorTarget>;
+  testResultsTarget?: string;
+  failOnUploadError?: boolean;
   environment?: string;
   RunId?: string;
   commitSHA?: string;
@@ -47,8 +53,11 @@ interface LogAnalyticsTestData {
 }
 
 class AzureMonitorReporter implements Reporter {
-  private logsIngestionClient?: LogsIngestionClient;
+  private publisher?: AzureMonitorPublisher;
+  private fallbackPublisher?: AzureMonitorPublisher;
   private testResults: LogAnalyticsTestData[] = [];
+  private targetName: string;
+  private failOnUploadError: boolean;
 
   private projectName: string;
   private dceEndpoint: string;
@@ -58,10 +67,71 @@ class AzureMonitorReporter implements Reporter {
   private RunId: string;
   private commitSHA?: string;
   private debugMode = false; // Optional debug mode
+  private authMode = "unconfigured";
 
   // To store config and suite information accessible in onTestEnd
   private currentConfig!: FullConfig;
   private currentRunSuite!: Suite;
+
+  private formatError(error: unknown): string {
+    if (error instanceof Error) {
+      return `${error.name}: ${error.message}`;
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+
+  private getNestedErrorMessages(error: unknown): string[] {
+    if (!error || typeof error !== "object") {
+      return [];
+    }
+
+    const nestedErrors = (error as { errors?: { cause?: unknown }[] }).errors;
+    if (!Array.isArray(nestedErrors)) {
+      return [];
+    }
+
+    return nestedErrors
+      .map(entry => this.formatError(entry.cause))
+      .filter(message => message && message !== "undefined");
+  }
+
+  private isAuthenticationError(error: unknown): boolean {
+    const combined = [this.formatError(error), ...this.getNestedErrorMessages(error)]
+      .join(" | ")
+      .toLowerCase();
+
+    return combined.includes("authentication") || combined.includes("credential");
+  }
+
+  private createDefaultCredential(clientId?: string): DefaultAzureCredential {
+    return new DefaultAzureCredential(
+      clientId
+        ? {
+            managedIdentityClientId: clientId,
+          }
+        : undefined
+    );
+  }
+
+  private async uploadWithPublisher(
+    publisher: AzureMonitorPublisher,
+    authMode: string
+  ): Promise<void> {
+    await publisher.publish(this.targetName, this.testResults);
+
+    console.log(
+      `Log Analytics Reporter: Successfully uploaded ${this.testResults.length} test results to Azure Log Analytics using ${authMode} authentication.`
+    );
+  }
 
   // Helper to get a "suite" name - typically the file name or a top-level describe
   private getTestSuite(test: TestCase): string {
@@ -73,19 +143,25 @@ class AzureMonitorReporter implements Reporter {
   }
 
   constructor(options?: AzureMonitorReporterOptions) {
+    this.targetName = options?.testResultsTarget || "testResults";
+    this.failOnUploadError = options?.failOnUploadError ?? false;
+    const selectedTarget = options?.targets?.[this.targetName];
+    if (options?.targets && !selectedTarget) {
+      throw new Error(`Unknown test-results target '${this.targetName}'.`);
+    }
     // Retrieve Azure configuration from environment variables or options
     this.projectName =
       options?.projectName ||
       process.env.AZURE_PROJECT_NAME ||
       "DefaultProject";
     this.dceEndpoint =
-      options?.dceEndpoint || process.env.LOG_ANALYTICS_DCE_ENDPOINT || "";
+      selectedTarget?.dceEndpoint || options?.dceEndpoint || process.env.LOG_ANALYTICS_DCE_ENDPOINT || "";
     this.dcrImmutableId =
-      options?.dcrImmutableId ||
+      selectedTarget?.dcrImmutableId || options?.dcrImmutableId ||
       process.env.LOG_ANALYTICS_DCR_IMMUTABLE_ID ||
       "";
     this.streamName =
-      options?.streamName || process.env.LOG_ANALYTICS_STREAM_NAME || "";
+      selectedTarget?.streamName || options?.streamName || process.env.LOG_ANALYTICS_STREAM_NAME || "";
 
     const azureTenantId = options?.azureTenantId || process.env.AZURE_TENANT_ID;
     const azureClientId = options?.azureClientId || process.env.AZURE_CLIENT_ID;
@@ -105,8 +181,13 @@ class AzureMonitorReporter implements Reporter {
       process.env.BUILD_SOURCEVERSION ||
       process.env.GIT_COMMIT_SHA ||
       process.env.GITHUB_SHA;
+    this.debugMode = options?.debugMode ?? false; // Optional debug mode
+    this.authMode = "unconfigured";
 
     if (!this.dceEndpoint || !this.dcrImmutableId || !this.streamName) {
+      if (this.failOnUploadError) {
+        throw new Error("DCE endpoint, DCR immutable ID, and stream name are required.");
+      }
       console.warn(
         "Log Analytics Reporter: DCE Endpoint, DCR Immutable ID, or Stream Name is not configured. Reporter will not send data."
       );
@@ -125,34 +206,49 @@ class AzureMonitorReporter implements Reporter {
       );
 
       console.debug(
-        `Log Analytics Reporter: Initialized with Azure Tenant: ${azureTenantId}`
+        `Log Analytics Reporter: Azure Tenant configured: ${Boolean(azureTenantId)}`
       );
       console.debug(
-        `Log Analytics Reporter: Initialized with Azure Client ID: ${azureClientId}`
+        `Log Analytics Reporter: Azure Client ID configured: ${Boolean(azureClientId)}`
+      );
+      console.debug(
+        `Log Analytics Reporter: Azure Client Secret configured: ${Boolean(azureClientSecret)}`
       );
     }
 
+    const publisherOptions = {
+      dceEndpoint: options?.dceEndpoint || process.env.LOG_ANALYTICS_DCE_ENDPOINT || this.dceEndpoint,
+      targets: options?.targets || {
+        [this.targetName]: { dcrImmutableId: this.dcrImmutableId, streamName: this.streamName },
+      },
+    };
     if (azureTenantId && azureClientId && azureClientSecret) {
       const credential = new ClientSecretCredential(
         azureTenantId,
         azureClientId,
         azureClientSecret
       );
-      this.logsIngestionClient = new LogsIngestionClient(
-        this.dceEndpoint,
-        credential
-      );
+      this.publisher = new AzureMonitorPublisher({ ...publisherOptions, credential });
+      this.fallbackPublisher = new AzureMonitorPublisher({
+        ...publisherOptions,
+        credential: this.createDefaultCredential(azureClientId),
+      });
+      this.authMode = "client-secret";
       if (this.debugMode) {
         console.debug(
           "Log Analytics Reporter: Azure credentials successfully configured. Reporter will send data."
         );
-        console.debug(
-          `Log Analytics Reporter: logsIngestionClient: ${this.logsIngestionClient}`
-        );
+        console.debug("Log Analytics Reporter: DefaultAzureCredential fallback enabled.");
       }
     } else {
+      this.publisher = new AzureMonitorPublisher({
+        ...publisherOptions,
+        credential: this.createDefaultCredential(azureClientId),
+      });
+      this.authMode = "default-credential";
+
       console.warn(
-        "Log Analytics Reporter: Azure credentials not fully configured. Reporter will not send data."
+        "Log Analytics Reporter: Explicit client secret credentials were not fully configured. Falling back to DefaultAzureCredential."
       );
     }
   }
@@ -198,7 +294,7 @@ class AzureMonitorReporter implements Reporter {
     console.log(
       `Log Analytics Reporter: Test run finished with status: ${result.status}`
     );
-    if (this.logsIngestionClient && this.testResults.length > 0) {
+    if (this.publisher && this.testResults.length > 0) {
       console.log(
         `Log Analytics Reporter: Preparing to send ${this.testResults.length} results to Azure Log Analytics.`
       );
@@ -210,24 +306,52 @@ class AzureMonitorReporter implements Reporter {
         );
       }
       try {
-        // Ensure the streamName in your Data Collection Rule (DCR) is configured to accept the structure of LogAnalyticsTestData.
-        // The DCR's stream name is what links the incoming data to the target Log Analytics table.
-        await this.logsIngestionClient.upload(
-          this.dcrImmutableId,
-          this.streamName,
-          this.testResults,
-          {
-            maxConcurrency: 5, // Optional: configure concurrency for uploads
-          }
-        );
-        console.log(
-          `Log Analytics Reporter: Successfully uploaded ${this.testResults.length} test results to Azure Log Analytics.`
-        );
+        await this.uploadWithPublisher(this.publisher, this.authMode);
       } catch (error) {
+        const nestedMessages = this.getNestedErrorMessages(error);
         console.error(
-          "Log Analytics Reporter: Error uploading data to Azure Log Analytics:",
-          error
+          `Log Analytics Reporter: Error uploading data to Azure Log Analytics via ${this.authMode}: ${this.formatError(error)}`
         );
+        if (nestedMessages.length > 0) {
+          console.error(
+            `Log Analytics Reporter: Nested upload errors: ${nestedMessages.join(" | ")}`
+          );
+        }
+
+        if (
+          this.fallbackPublisher &&
+          this.isAuthenticationError(error)
+        ) {
+          console.warn(
+            "Log Analytics Reporter: Retrying upload with DefaultAzureCredential fallback."
+          );
+
+          try {
+            await this.uploadWithPublisher(
+              this.fallbackPublisher,
+              "default-credential fallback"
+            );
+            return;
+          } catch (fallbackError) {
+            const fallbackNestedMessages = this.getNestedErrorMessages(fallbackError);
+            console.error(
+              `Log Analytics Reporter: Fallback upload failed: ${this.formatError(fallbackError)}`
+            );
+            if (fallbackNestedMessages.length > 0) {
+              console.error(
+                `Log Analytics Reporter: Fallback nested upload errors: ${fallbackNestedMessages.join(" | ")}`
+              );
+            }
+            if (this.failOnUploadError) {
+              throw fallbackError;
+            }
+          }
+        }
+
+        if (this.failOnUploadError) {
+          throw error;
+        }
+
         // Optionally, write to a local file as a fallback
         // import * as fs from 'fs'; // Use 'import * as fs' for ES modules or 'const fs = require("fs")' for CJS
         // fs.writeFileSync(`log-analytics-fallback-${Date.now()}.json`, JSON.stringify(this.testResults, null, 2));

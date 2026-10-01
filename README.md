@@ -56,32 +56,125 @@ optional:
 ```typescript
 // playwright.config.ts
 import { defineConfig } from '@playwright/test';
-import { AzureMonitorReporter } from 'playwright-azure-monitor-reporter';
+import type { AzureMonitorReporterOptions } from 'playwright-azure-monitor-reporter';
+
+const azureOptions: AzureMonitorReporterOptions = {
+  projectName: 'Some Project Name',
+  environment: process.env.TEST_ENVIRONMENT,
+  debugMode: false,
+};
 
 export default defineConfig({
   reporter: [
     ['list'],
-    ['playwright-azure-monitor-reporter', {
-      // Configuration here
-      projectName: 'Some Project Name', // to identify the test project or other information to group tests
-      // Additional options which look for environment variables if not defined here
-      azureTenantId?: string
-      azureClientId?: string
-      azureClientSecret?: string
-      dceEndpoint?: string
-      dcrImmutableId?: string
-      streamName?: string
-      environment?: string
-      RunId?: string
-      commitSHA?: string
-      debugMode?: boolean // Optional debug mode to enable more verbose logging
-
-    } as AzureMonitorReporter,
-    ]
+    ['playwright-azure-monitor-reporter', azureOptions],
   ],
-  // Other Playwright configuration
 });
 ```
+
+### Named Targets and Custom Measurements
+
+The default reporter export, existing single-stream options, environment fallbacks,
+and 16-column test-result schema remain compatible. `targets` adds named routes;
+`testResultsTarget` selects one route for test results (default: `testResults`).
+The reporter never broadcasts test results to other routes or mixes measurements
+into the test-result schema.
+
+For targets sharing a DCR, reuse `LOG_ANALYTICS_DCR_IMMUTABLE_ID` and configure
+separate stream names. The examples below use an optional custom-target
+ID override only when that target needs a different DCR. The `LOG_ANALYTICS_CUSTOM_*`
+variables are example consumer configuration, not additional built-in package defaults.
+
+```typescript
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  reporter: [['playwright-azure-monitor-reporter', {
+    dceEndpoint: process.env.LOG_ANALYTICS_DCE_ENDPOINT,
+    targets: {
+      testResults: {
+        dcrImmutableId: process.env.LOG_ANALYTICS_DCR_IMMUTABLE_ID,
+        streamName: process.env.LOG_ANALYTICS_STREAM_NAME,
+      },
+      customRecords: {
+        dcrImmutableId:
+          process.env.LOG_ANALYTICS_CUSTOM_DCR_IMMUTABLE_ID ||
+          process.env.LOG_ANALYTICS_DCR_IMMUTABLE_ID,
+        streamName: process.env.LOG_ANALYTICS_CUSTOM_STREAM_NAME,
+      },
+    },
+    testResultsTarget: 'testResults',
+    failOnUploadError: true,
+  }]],
+});
+```
+
+Use the exported `AzureMonitorPublisher` to upload caller-supplied records independently
+of the reporter. Targets may use different streams on the same DCR, different DCRs,
+or a per-target `dceEndpoint`. Clients are reused for targets sharing an endpoint.
+Record fields and target names are chosen by the consumer; the package does not
+enforce a domain-specific custom-record schema. For example, configure
+`LOG_ANALYTICS_CUSTOM_STREAM_NAME=Custom-Measurements_CL` for your `Measurements_CL`
+table and publish records from a Playwright test:
+
+```typescript
+import { test } from '@playwright/test';
+import { AzureMonitorPublisher } from 'playwright-azure-monitor-reporter';
+
+const publisher = new AzureMonitorPublisher({
+  dceEndpoint: process.env.LOG_ANALYTICS_DCE_ENDPOINT,
+  targets: {
+    customRecords: {
+      dcrImmutableId: (
+        process.env.LOG_ANALYTICS_CUSTOM_DCR_IMMUTABLE_ID ||
+        process.env.LOG_ANALYTICS_DCR_IMMUTABLE_ID
+      )!,
+      streamName: process.env.LOG_ANALYTICS_CUSTOM_STREAM_NAME!,
+    },
+  },
+});
+
+test('publish custom measurements', async () => {
+  await publisher.publish('customRecords', [{
+    TimeGenerated: new Date().toISOString(),
+    Service: 'orders-api',
+    Measurement: 'ResponseTime',
+    Value: 120,
+    Unit: 'ms',
+  }]);
+});
+```
+
+The values above illustrate a row; real monitors must publish calculated measurements.
+Missing configuration and unknown targets throw. Empty batches are skipped. Upload
+failures reject `publish`; callers must await it before completing a monitoring run.
+The publisher does not perform whole-batch credential fallback, which could duplicate
+rows after a partial upload. Transient retry and batching are handled by the Azure SDK.
+
+Authentication accepts an explicit `credential` implementing Azure's token credential
+contract. Otherwise it uses complete client-secret configuration from options or
+`AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`, falling back to
+`DefaultAzureCredential` when those credentials are incomplete. Prefer managed identity
+on Azure and a service principal or federated identity in CI; keep credentials outside
+source control. The reporter preserves its existing authentication-error fallback and
+logging-only failure behavior by default; `failOnUploadError: true` makes final upload
+errors reject `onEnd` and incomplete routing fail initialization. For strict CI gating,
+await `publisher.publish` in the monitoring test rather than relying only on a reporter
+exception to determine Playwright's exit code.
+
+Create the destination table and matching schema before configuring the DCR flow.
+The SDK and DCR do not auto-create tables. Custom payloads must match the configured
+input stream schema and, after any DCR transformation, the destination table schema.
+The example table name and fields are illustrative; use your own custom table and
+record fields. Keep the reporter's test-result schema separate from custom payloads.
+Use separate custom tables for different schemas,
+retention plans, or reader-access requirements. Use separate DCRs when writer permissions
+must differ: publisher RBAC applies to the entire DCR, not one input stream.
+
+These named APIs require a new package release; previously published versions do not
+include them. Build and release the package, then update consumers to that version.
+
+Reference: [Azure Monitor Logs Ingestion SDK for JavaScript](https://learn.microsoft.com/javascript/api/overview/azure/monitor-ingestion-readme).
 
 
 ## Data Schema
